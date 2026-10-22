@@ -18,7 +18,9 @@ describe('resolveInputValuesToSchema', () => {
     expect(() =>
       resolveInputValuesToSchema({ ...inputs, secret: 'synthetic-secret-sentinel' }, schema, true)
     ).toThrow(
-      `Invalid workflow inputs: ${message}. Provide values that match the workflow input schema.`
+      new Error(
+        `Invalid workflow inputs: ${message}. Provide values that match the workflow input schema.`
+      )
     );
   });
 
