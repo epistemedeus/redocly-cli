@@ -47,11 +47,32 @@ export function mergeWorkflowInputs({
     ? resolveInputValuesToSchema(env || {}, workflowInputSchema.properties.env as InputSchema)
     : {};
 
-  return resolveInputValuesToSchema(
-    Object.keys(resolvedDotEnvInputs).length > 0
-      ? { ...inputs, env: resolvedDotEnvInputs }
-      : inputs,
-    workflowInputSchema,
-    onInvalidInputs
-  );
+  const hasResolvedEnv = Object.keys(resolvedDotEnvInputs).length > 0;
+  const mergedInputs = hasResolvedEnv ? { ...inputs, env: resolvedDotEnvInputs } : inputs;
+
+  if (
+    onInvalidInputs &&
+    workflowInputSchema.properties?.env &&
+    !hasResolvedEnv &&
+    !Object.prototype.hasOwnProperty.call(inputs ?? {}, 'env')
+  ) {
+    const problems: string[] = [];
+    const resolvedInputs = resolveInputValuesToSchema(
+      mergedInputs,
+      workflowInputSchema,
+      (problem) => problems.push(problem)
+    );
+    // Check omitted env separately without changing the returned inputs or root validation.
+    resolveInputValuesToSchema(
+      { env: {} },
+      { type: 'object', properties: { env: workflowInputSchema.properties.env } },
+      (problem) => problems.push(problem)
+    );
+    if (problems.length > 0) {
+      onInvalidInputs(problems.join(', '));
+    }
+    return resolvedInputs;
+  }
+
+  return resolveInputValuesToSchema(mergedInputs, workflowInputSchema, onInvalidInputs);
 }
